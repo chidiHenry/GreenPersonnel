@@ -1,0 +1,45 @@
+/* Styles for Enhanced Custom Registration Form */
+
+form#enhanced-registration-form {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    background: #f9f9f9;
+}
+
+form#enhanced-registration-form p {
+    margin-bottom: 15px;
+}
+
+form#enhanced-registration-form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+form#enhanced-registration-form input,
+form#enhanced-registration-form textarea,
+form#enhanced-registration-form select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+form#enhanced-registration-form input[type="submit"] {
+    background: #0073aa;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+form#enhanced-registration-form input[type="submit"]:hover {
+    background: #005885;
+}
