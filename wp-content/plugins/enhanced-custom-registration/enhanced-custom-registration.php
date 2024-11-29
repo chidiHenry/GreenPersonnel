@@ -24,6 +24,7 @@ function ecrf_display_registration_form() {
     } else {
         ?>
         <form id="enhanced-registration-form" action="" method="post" enctype="multipart/form-data">
+        <input type="hidden" name="form_identifier" value="enhanced_custom_registration">
             <p>
                 <label for="first_name">First Name</label>
                 <input type="text" name="first_name" required>
@@ -111,7 +112,7 @@ function ecrf_display_registration_form() {
 // Handle form submission
 // Handle form submission
 function ecrf_handle_registration() {
-    if (isset($_POST['submit_registration'])) {
+    if (isset($_POST['submit_registration']) && $_POST['form_identifier'] === 'enhanced_custom_registration') {
         // Sanitize inputs
         $first_name = sanitize_text_field($_POST['first_name']);
         $surname = sanitize_text_field($_POST['surname']);
@@ -171,19 +172,19 @@ function ecrf_handle_registration() {
         ];
         $user_id = wp_insert_user($userdata);
         if (!is_wp_error($user_id)) {
-            // Save additional fields
-            update_user_meta($user_id, 'phone', $phone);
-            update_user_meta($user_id, 'address', $address);
-            update_user_meta($user_id, 'job_category', $job_category);
-            update_user_meta($user_id, 'profession', $profession);
-            update_user_meta($user_id, 'id_type', $id_type);
-            update_user_meta($user_id, 'cv', $cv_upload['url']);
-            update_user_meta($user_id, 'certificates', $certificate_urls);
+            // Save additional fields with ecrf_ prefix
+            update_user_meta($user_id, 'ecrf_phone', $phone);
+            update_user_meta($user_id, 'ecrf_address', $address);
+            update_user_meta($user_id, 'ecrf_job_category', $job_category);
+            update_user_meta($user_id, 'ecrf_profession', $profession);
+            update_user_meta($user_id, 'ecrf_id_type', $id_type);
+            update_user_meta($user_id, 'ecrf_cv', $cv_upload['url']);
+            update_user_meta($user_id, 'ecrf_certificates', $certificate_urls);
 
             // Log the user in
             wp_set_current_user($user_id);
             wp_set_auth_cookie($user_id);
-            wp_redirect(admin_url('profile.php')); 
+            //wp_redirect(admin_url('profile.php')); 
             echo '<p style="color:green;">Registration complete. You are now logged in.</p>';
         } else {
             echo '<p style="color:red;">Error: ' . $user_id->get_error_message() . '</p>';
@@ -202,42 +203,42 @@ function ecrf_show_custom_profile_fields($user) {
         <tr>
             <th><label for="phone">Phone</label></th>
             <td>
-                <input type="text" name="phone" value="<?php echo esc_attr(get_the_author_meta('phone', $user->ID)); ?>" class="regular-text" />
+                <input type="text" name="ecrf_phone" value="<?php echo esc_attr(get_the_author_meta('ecrf_phone', $user->ID)); ?>" class="regular-text" />
             </td>
         </tr>
         <!-- Address -->
         <tr>
             <th><label for="address">Address</label></th>
             <td>
-                <textarea name="address" class="regular-text"><?php echo esc_textarea(get_the_author_meta('address', $user->ID)); ?></textarea>
+                <textarea name="ecrf_address" class="regular-text"><?php echo esc_textarea(get_the_author_meta('ecrf_address', $user->ID)); ?></textarea>
             </td>
         </tr>
         <!-- Job Category -->
         <tr>
             <th><label for="job_category">Job Category</label></th>
             <td>
-                <input type="text" name="job_category" value="<?php echo esc_attr(get_the_author_meta('job_category', $user->ID)); ?>" class="regular-text" />
+                <input type="text" name="ecrf_job_category" value="<?php echo esc_attr(get_the_author_meta('ecrf_job_category', $user->ID)); ?>" class="regular-text" />
             </td>
         </tr>
         <!-- Profession -->
         <tr>
             <th><label for="profession">Profession</label></th>
             <td>
-                <input type="text" name="profession" value="<?php echo esc_attr(get_the_author_meta('profession', $user->ID)); ?>" class="regular-text" />
+                <input type="text" name="ecrf_profession" value="<?php echo esc_attr(get_the_author_meta('ecrf_profession', $user->ID)); ?>" class="regular-text" />
             </td>
         </tr>
         <!-- ID Type -->
         <tr>
             <th><label for="id_type">ID Type</label></th>
             <td>
-                <input type="text" name="id_type" value="<?php echo esc_attr(get_the_author_meta('id_type', $user->ID)); ?>" class="regular-text" />
+                <input type="text" name="ecrf_id_type" value="<?php echo esc_attr(get_the_author_meta('ecrf_id_type', $user->ID)); ?>" class="regular-text" />
             </td>
         </tr>
         <!-- CV -->
         <tr>
             <th><label for="cv">CV</label></th>
             <td>
-                <?php $cv = get_the_author_meta('cv', $user->ID); ?>
+                <?php $cv = get_the_author_meta('ecrf_cv', $user->ID); ?>
                 <?php if ($cv) : ?>
                     <a href="<?php echo esc_url($cv); ?>" target="_blank">View Uploaded CV</a>
                 <?php else : ?>
@@ -251,7 +252,7 @@ function ecrf_show_custom_profile_fields($user) {
     <td>
         <?php
         // Retrieve and unserialize certificates
-        $certificates = maybe_unserialize(get_the_author_meta('certificates', $user->ID));
+        $certificates = maybe_unserialize(get_the_author_meta('ecrf_certificates', $user->ID));
         
         // Check if certificates is an array and display them
         if (is_array($certificates) && !empty($certificates)) :
@@ -277,11 +278,11 @@ function ecrf_save_custom_profile_fields($user_id) {
         return false;
     }
 
-    update_user_meta($user_id, 'phone', sanitize_text_field($_POST['phone']));
-    update_user_meta($user_id, 'address', sanitize_textarea_field($_POST['address']));
-    update_user_meta($user_id, 'job_category', sanitize_text_field($_POST['job_category']));
-    update_user_meta($user_id, 'profession', sanitize_text_field($_POST['profession']));
-    update_user_meta($user_id, 'id_type', sanitize_text_field($_POST['id_type']));
+    update_user_meta($user_id, 'ecrf_phone', sanitize_text_field($_POST['ecrf_phone']));
+    update_user_meta($user_id, 'ecrf_address', sanitize_textarea_field($_POST['ecrf_address']));
+    update_user_meta($user_id, 'ecrf_job_category', sanitize_text_field($_POST['ecrf_job_category']));
+    update_user_meta($user_id, 'ecrf_profession', sanitize_text_field($_POST['ecrf_profession']));
+    update_user_meta($user_id, 'ecrf_id_type', sanitize_text_field($_POST['ecrf_id_type']));
 }
 add_action('personal_options_update', 'ecrf_save_custom_profile_fields');
 add_action('edit_user_profile_update', 'ecrf_save_custom_profile_fields');

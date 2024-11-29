@@ -1,0 +1,45 @@
+/* Styles for Custom Registration Form */
+form#custom-registration-form {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: #f9f9f9;
+}
+
+form#custom-registration-form p {
+    margin-bottom: 15px;
+}
+
+form#custom-registration-form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+form#custom-registration-form input,
+form#custom-registration-form textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+form#custom-registration-form input[type="submit"] {
+    background: #0073aa;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    text-transform: uppercase;
+}
+
+form#custom-registration-form input[type="submit"]:hover {
+    background: #005885;
+}
