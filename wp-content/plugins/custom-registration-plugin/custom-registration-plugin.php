@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Custom Registration Plugin
  * Description: A custom registration plugin with fields: Contact Person, Phone, E-mail, Address, Business Name, Password, Confirm Password.
- * Version: 1.1
+ * Version: 1.2
  * Author: Chidi Emeribe
  */
 
@@ -24,8 +24,7 @@ function crp_display_registration_form() {
     } else {
         ?>
         <form id="custom-registration-form" action="" method="post">
-        <input type="hidden" name="form_identifier" value="custom_registration_form">
-
+            <input type="hidden" name="form_identifier" value="custom_registration_form">
             <p>
                 <label for="first_name">First Name</label>
                 <input type="text" name="first_name" required>
@@ -105,8 +104,7 @@ function crp_handle_registration() {
             // Log the user in
             wp_set_current_user($user_id);
             wp_set_auth_cookie($user_id);
-            //wp_redirect(admin_url('profile.php'));
-            exit;
+            echo '<p style="color:green;">Registration complete. You are now logged in.</p>';
         } else {
             echo '<p style="color:red;">Error: ' . $user_id->get_error_message() . '</p>';
         }
@@ -114,10 +112,15 @@ function crp_handle_registration() {
 }
 add_action('init', 'crp_handle_registration');
 
-// Display Custom Fields in Profile
-function crp_show_custom_profile_fields($user) {
+// Display Role-Specific Fields in Profile
+function crp_show_role_specific_fields($user) {
+    // Get user roles
+    $user_roles = get_userdata($user->ID)->roles;
+
+    // Common fields for all users
     ?>
-    <h3>Custom Registration Fields (CRP)</h3>
+    <!--
+    <h3>Common Fields</h3>
     <table class="form-table">
         <tr>
             <th><label for="crp_phone">Phone</label></th>
@@ -131,27 +134,59 @@ function crp_show_custom_profile_fields($user) {
                 <textarea name="crp_address" class="regular-text"><?php echo esc_textarea(get_the_author_meta('crp_address', $user->ID)); ?></textarea>
             </td>
         </tr>
+    </table>
+    -->
+    <?php
+
+    // Contributor-specific fields
+    if (in_array('contributor', $user_roles)) {
+        ?>
+        <h3>Contributor Fields</h3>
+        <table class="form-table">
         <tr>
-            <th><label for="crp_business_name">Business Name</label></th>
+            <th><label for="crp_phone">Phone</label></th>
             <td>
-                <input type="text" name="crp_business_name" value="<?php echo esc_attr(get_the_author_meta('crp_business_name', $user->ID)); ?>" class="regular-text">
+                <input type="text" name="crp_phone" value="<?php echo esc_attr(get_the_author_meta('crp_phone', $user->ID)); ?>" class="regular-text">
             </td>
         </tr>
-    </table>
-    <?php
+        <tr>
+            <th><label for="crp_address">Address</label></th>
+            <td>
+                <textarea name="crp_address" class="regular-text"><?php echo esc_textarea(get_the_author_meta('crp_address', $user->ID)); ?></textarea>
+            </td>
+        </tr>
+            <tr>
+                <th><label for="crp_business_name">Business Name</label></th>
+                <td>
+                    <input type="text" name="crp_business_name" value="<?php echo esc_attr(get_the_author_meta('crp_business_name', $user->ID)); ?>" class="regular-text">
+                </td>
+            </tr>
+        </table>
+        <?php
+    }
 }
-add_action('show_user_profile', 'crp_show_custom_profile_fields');
-add_action('edit_user_profile', 'crp_show_custom_profile_fields');
+add_action('show_user_profile', 'crp_show_role_specific_fields');
+add_action('edit_user_profile', 'crp_show_role_specific_fields');
 
-// Save Custom Fields in Profile
-function crp_save_custom_profile_fields($user_id) {
+// Save Role-Specific Fields
+function crp_save_role_specific_fields($user_id) {
     if (!current_user_can('edit_user', $user_id)) {
         return false;
     }
 
-    update_user_meta($user_id, 'crp_phone', sanitize_text_field($_POST['crp_phone']));
-    update_user_meta($user_id, 'crp_address', sanitize_textarea_field($_POST['crp_address']));
-    update_user_meta($user_id, 'crp_business_name', sanitize_text_field($_POST['crp_business_name']));
+    // Save common fields
+    if (isset($_POST['crp_phone'])) {
+        update_user_meta($user_id, 'crp_phone', sanitize_text_field($_POST['crp_phone']));
+    }
+    if (isset($_POST['crp_address'])) {
+        update_user_meta($user_id, 'crp_address', sanitize_textarea_field($_POST['crp_address']));
+    }
+
+    // Save contributor-specific fields
+    $user_roles = get_userdata($user_id)->roles;
+    if (in_array('contributor', $user_roles) && isset($_POST['crp_business_name'])) {
+        update_user_meta($user_id, 'crp_business_name', sanitize_text_field($_POST['crp_business_name']));
+    }
 }
-add_action('personal_options_update', 'crp_save_custom_profile_fields');
-add_action('edit_user_profile_update', 'crp_save_custom_profile_fields');
+add_action('personal_options_update', 'crp_save_role_specific_fields');
+add_action('edit_user_profile_update', 'crp_save_role_specific_fields');

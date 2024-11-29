@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Enhanced Custom Registration Form
  * Description: A plugin to create a custom registration form with advanced fields.
- * Version: 1.1
+ * Version: 1.2
  * Author: Chidi Emeribe
  */
 
@@ -24,7 +24,7 @@ function ecrf_display_registration_form() {
     } else {
         ?>
         <form id="enhanced-registration-form" action="" method="post" enctype="multipart/form-data">
-        <input type="hidden" name="form_identifier" value="enhanced_custom_registration">
+            <input type="hidden" name="form_identifier" value="enhanced_custom_registration">
             <p>
                 <label for="first_name">First Name</label>
                 <input type="text" name="first_name" required>
@@ -110,7 +110,6 @@ function ecrf_display_registration_form() {
 }
 
 // Handle form submission
-// Handle form submission
 function ecrf_handle_registration() {
     if (isset($_POST['submit_registration']) && $_POST['form_identifier'] === 'enhanced_custom_registration') {
         // Sanitize inputs
@@ -131,36 +130,39 @@ function ecrf_handle_registration() {
         }
 
         // Handle file uploads
-        require_once(ABSPATH . 'wp-admin/includes/file.php');
-        $upload_overrides = ['test_form' => false];
+require_once(ABSPATH . 'wp-admin/includes/file.php');
+$upload_overrides = ['test_form' => false];
 
-        // CV upload
-        $cv = $_FILES['cv'];
-        $cv_upload = wp_handle_upload($cv, $upload_overrides);
-        if (isset($cv_upload['error'])) {
-            echo '<p style="color:red;">Error uploading CV: ' . esc_html($cv_upload['error']) . '</p>';
-            return;
-        }
+// CV upload
+$cv_upload = null; // Default to null
+if (isset($_FILES['cv']) && $_FILES['cv']['error'] === UPLOAD_ERR_OK) {
+    $cv = $_FILES['cv'];
+    $cv_upload = wp_handle_upload($cv, $upload_overrides);
+    if (isset($cv_upload['error'])) {
+        echo '<p style="color:red;">Error uploading CV: ' . esc_html($cv_upload['error']) . '</p>';
+        return;
+    }
+}
 
-        // Certificates upload
-        $certificates = $_FILES['certificates'];
-        $certificate_urls = [];
-        if (!empty($certificates['name'][0])) {
-            foreach ($certificates['name'] as $key => $certificate_name) {
-                $certificate_file = [
-                    'name' => $certificates['name'][$key],
-                    'type' => $certificates['type'][$key],
-                    'tmp_name' => $certificates['tmp_name'][$key],
-                    'error' => $certificates['error'][$key],
-                    'size' => $certificates['size'][$key],
-                ];
-                $certificate_upload = wp_handle_upload($certificate_file, $upload_overrides);
-                if (!isset($certificate_upload['error'])) {
-                    $certificate_urls[] = $certificate_upload['url'];
-                }
+// Certificates upload
+$certificate_urls = []; // Initialize an empty array
+if (isset($_FILES['certificates']) && !empty($_FILES['certificates']['name'][0])) {
+    foreach ($_FILES['certificates']['name'] as $key => $certificate_name) {
+        if (!empty($_FILES['certificates']['tmp_name'][$key]) && $_FILES['certificates']['error'][$key] === UPLOAD_ERR_OK) {
+            $certificate_file = [
+                'name' => $_FILES['certificates']['name'][$key],
+                'type' => $_FILES['certificates']['type'][$key],
+                'tmp_name' => $_FILES['certificates']['tmp_name'][$key],
+                'error' => $_FILES['certificates']['error'][$key],
+                'size' => $_FILES['certificates']['size'][$key],
+            ];
+            $certificate_upload = wp_handle_upload($certificate_file, $upload_overrides);
+            if (!isset($certificate_upload['error'])) {
+                $certificate_urls[] = $certificate_upload['url'];
             }
         }
-
+    }
+}
         // Create user
         $userdata = [
             'user_login' => $email,
@@ -184,105 +186,156 @@ function ecrf_handle_registration() {
             // Log the user in
             wp_set_current_user($user_id);
             wp_set_auth_cookie($user_id);
-            //wp_redirect(admin_url('profile.php')); 
             echo '<p style="color:green;">Registration complete. You are now logged in.</p>';
         } else {
             echo '<p style="color:red;">Error: ' . $user_id->get_error_message() . '</p>';
         }
+        update_user_meta($user_id, 'ecrf_cv', $cv_upload['url']);
+        update_user_meta($user_id, 'ecrf_certificates', maybe_serialize($certificate_urls));
+
+
     }
 }
 add_action('init', 'ecrf_handle_registration');
+// Save URLs to user_meta
 
-// Add custom fields to the profile page
-// Add custom fields to the user profile page
-function ecrf_show_custom_profile_fields($user) {
+
+// Add role-specific fields to the profile page
+function ecrf_show_role_specific_fields($user) {
+    // Get user roles
+    $user_roles = get_userdata($user->ID)->roles;
+
+    // Common fields for all users
     ?>
-    <h3>Custom Fields</h3>
+    <!--
+    <h3>Common Fields</h3>
     <table class="form-table">
-        <!-- Phone -->
         <tr>
-            <th><label for="phone">Phone</label></th>
+            <th><label for="ecrf_phone">Phone</label></th>
             <td>
                 <input type="text" name="ecrf_phone" value="<?php echo esc_attr(get_the_author_meta('ecrf_phone', $user->ID)); ?>" class="regular-text" />
             </td>
         </tr>
-        <!-- Address -->
         <tr>
-            <th><label for="address">Address</label></th>
+            <th><label for="ecrf_address">Address</label></th>
             <td>
                 <textarea name="ecrf_address" class="regular-text"><?php echo esc_textarea(get_the_author_meta('ecrf_address', $user->ID)); ?></textarea>
             </td>
         </tr>
-        <!-- Job Category -->
-        <tr>
-            <th><label for="job_category">Job Category</label></th>
-            <td>
-                <input type="text" name="ecrf_job_category" value="<?php echo esc_attr(get_the_author_meta('ecrf_job_category', $user->ID)); ?>" class="regular-text" />
-            </td>
-        </tr>
-        <!-- Profession -->
-        <tr>
-            <th><label for="profession">Profession</label></th>
-            <td>
-                <input type="text" name="ecrf_profession" value="<?php echo esc_attr(get_the_author_meta('ecrf_profession', $user->ID)); ?>" class="regular-text" />
-            </td>
-        </tr>
-        <!-- ID Type -->
-        <tr>
-            <th><label for="id_type">ID Type</label></th>
-            <td>
-                <input type="text" name="ecrf_id_type" value="<?php echo esc_attr(get_the_author_meta('ecrf_id_type', $user->ID)); ?>" class="regular-text" />
-            </td>
-        </tr>
-        <!-- CV -->
-        <tr>
-            <th><label for="cv">CV</label></th>
-            <td>
-                <?php $cv = get_the_author_meta('ecrf_cv', $user->ID); ?>
-                <?php if ($cv) : ?>
-                    <a href="<?php echo esc_url($cv); ?>" target="_blank">View Uploaded CV</a>
-                <?php else : ?>
-                    <p>No CV uploaded.</p>
-                <?php endif; ?>
-            </td>
-        </tr>
-        <!-- Certificates -->
-        <tr>
-    <th><label for="certificates">Certificates</label></th>
-    <td>
-        <?php
-        // Retrieve and unserialize certificates
-        $certificates = maybe_unserialize(get_the_author_meta('ecrf_certificates', $user->ID));
-        
-        // Check if certificates is an array and display them
-        if (is_array($certificates) && !empty($certificates)) :
-            foreach ($certificates as $certificate) : ?>
-                <p>
-                    <a href="<?php echo esc_url($certificate); ?>" target="_blank">View Certificate</a>
-                </p>
-            <?php endforeach;
-        else : ?>
-            <p>No certificates uploaded.</p>
-        <?php endif; ?>
-    </td>
-</tr>
     </table>
+    -->
     <?php
-}
-add_action('show_user_profile', 'ecrf_show_custom_profile_fields');
-add_action('edit_user_profile', 'ecrf_show_custom_profile_fields');
 
-// Save custom fields from the user profile page
-function ecrf_save_custom_profile_fields($user_id) {
+    // Fields for "Subscriber" role
+    if (in_array('subscriber', $user_roles)) {
+        ?>
+        <h3>Subscriber-Specific Fields</h3>
+        <table class="form-table">
+        <tr>
+            <th><label for="ecrf_phone">Phone</label></th>
+            <td>
+                <input type="text" name="ecrf_phone" value="<?php echo esc_attr(get_the_author_meta('ecrf_phone', $user->ID)); ?>" class="regular-text" />
+            </td>
+        </tr>
+        <tr>
+            <th><label for="ecrf_address">Address</label></th>
+            <td>
+                <textarea name="ecrf_address" class="regular-text"><?php echo esc_textarea(get_the_author_meta('ecrf_address', $user->ID)); ?></textarea>
+            </td>
+        </tr>
+            <tr>
+                <th><label for="ecrf_job_category">Job Category</label></th>
+                <td>
+                    <input type="text" name="ecrf_job_category" value="<?php echo esc_attr(get_the_author_meta('ecrf_job_category', $user->ID)); ?>" class="regular-text" />
+                </td>
+            </tr>
+            <tr>
+                <th><label for="ecrf_profession">Profession</label></th>
+                <td>
+                    <input type="text" name="ecrf_profession" value="<?php echo esc_attr(get_the_author_meta('ecrf_profession', $user->ID)); ?>" class="regular-text" />
+                </td>
+            </tr>
+        </table>
+        <?php
+      ?>
+      <h3>Uploaded Files</h3>
+      <table class="form-table">
+          <!-- CV -->
+          <tr>
+              <th><label for="ecrf_cv">Uploaded CV</label></th>
+              <td>
+                  <?php
+                  $cv = get_user_meta($user->ID, 'ecrf_cv', true);
+                  if ($cv) {
+                      echo '<a href="' . esc_url($cv) . '" target="_blank">View CV</a>';
+                  } else {
+                      echo '<p>No CV uploaded.</p>';
+                  }
+                  ?>
+              </td>
+          </tr>
+          <!-- Certificates -->
+          <tr>
+              <th><label for="ecrf_certificates">Uploaded Certificates</label></th>
+              <td>
+                  <?php
+                  $certificates = maybe_unserialize(get_user_meta($user->ID, 'ecrf_certificates', true));
+                  if (!empty($certificates) && is_array($certificates)) {
+                      foreach ($certificates as $certificate) {
+                          echo '<p><a href="' . esc_url($certificate) . '" target="_blank">View Certificate</a></p>';
+                      }
+                  } else {
+                      echo '<p>No Certificates uploaded.</p>';
+                  }
+                  ?>
+              </td>
+          </tr>
+      </table>
+      <?php
+        
+    }
+}
+add_action('show_user_profile', 'ecrf_show_role_specific_fields');
+add_action('edit_user_profile', 'ecrf_show_role_specific_fields');
+
+// Save role-specific fields
+function ecrf_save_role_specific_fields($user_id) {
     if (!current_user_can('edit_user', $user_id)) {
         return false;
     }
+    require_once(ABSPATH . 'wp-admin/includes/file.php');
+$upload_overrides = ['test_form' => false];
 
-    update_user_meta($user_id, 'ecrf_phone', sanitize_text_field($_POST['ecrf_phone']));
-    update_user_meta($user_id, 'ecrf_address', sanitize_textarea_field($_POST['ecrf_address']));
-    update_user_meta($user_id, 'ecrf_job_category', sanitize_text_field($_POST['ecrf_job_category']));
-    update_user_meta($user_id, 'ecrf_profession', sanitize_text_field($_POST['ecrf_profession']));
-    update_user_meta($user_id, 'ecrf_id_type', sanitize_text_field($_POST['ecrf_id_type']));
+// Update CV
+if (isset($_FILES['ecrf_cv']) && $_FILES['ecrf_cv']['error'] === UPLOAD_ERR_OK) {
+    $cv = $_FILES['ecrf_cv'];
+    $cv_upload = wp_handle_upload($cv, $upload_overrides);
+    if (!isset($cv_upload['error'])) {
+        update_user_meta($user_id, 'ecrf_cv', $cv_upload['url']);
+    }
 }
-add_action('personal_options_update', 'ecrf_save_custom_profile_fields');
-add_action('edit_user_profile_update', 'ecrf_save_custom_profile_fields');
+
+// Update Certificates
+if (isset($_FILES['ecrf_certificates']) && !empty($_FILES['ecrf_certificates']['name'][0])) {
+    $certificate_urls = [];
+    foreach ($_FILES['ecrf_certificates']['name'] as $key => $certificate_name) {
+        if (!empty($_FILES['ecrf_certificates']['tmp_name'][$key]) && $_FILES['ecrf_certificates']['error'][$key] === UPLOAD_ERR_OK) {
+            $certificate_file = [
+                'name' => $_FILES['ecrf_certificates']['name'][$key],
+                'type' => $_FILES['ecrf_certificates']['type'][$key],
+                'tmp_name' => $_FILES['ecrf_certificates']['tmp_name'][$key],
+                'error' => $_FILES['ecrf_certificates']['error'][$key],
+                'size' => $_FILES['ecrf_certificates']['size'][$key],
+            ];
+            $certificate_upload = wp_handle_upload($certificate_file, $upload_overrides);
+            if (!isset($certificate_upload['error'])) {
+                $certificate_urls[] = $certificate_upload['url'];
+            }
+        }
+    }
+    update_user_meta($user_id, 'ecrf_certificates', maybe_serialize($certificate_urls));
+}
+    
+}
+add_action('personal_options_update', 'ecrf_save_role_specific_fields');
+add_action('edit_user_profile_update', 'ecrf_save_role_specific_fields');
